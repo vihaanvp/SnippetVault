@@ -14,6 +14,11 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # ---- Runtime stage ----
 FROM python:3.12-slim
 
+# Link this image to the GitHub repository for package listings
+LABEL org.opencontainers.image.source=https://github.com/vihaanvp/SnippetVault
+LABEL org.opencontainers.image.description="SnippetVault — self-hostable code snippet manager"
+LABEL org.opencontainers.image.licenses=MIT
+
 # Create a non-root user
 RUN groupadd --gid 1000 snippet && \
     useradd --uid 1000 --gid snippet --create-home --shell /bin/bash snippet
