@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}My Snippets — SnippetVault{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-columns-gap"></i> My Snippets</h3>
+    <a href="{{ url_for('create_snippet') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Snippet</a>
+</div>
+
+<div class="row">
+    <!-- Tag filter sidebar -->
+    <div class="col-md-3">
+        <div class="card bg-black border-secondary mb-3">
+            <div class="card-body">
+                <h6><i class="bi bi-tags"></i> Tags</h6>
+                {% if all_tags %}
+                <div class="d-flex flex-wrap gap-1">
+                    <a href="{{ url_for('dashboard') }}" class="badge {% if not tag_filter %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">all</a>
+                    {% for t in all_tags %}
+                    <a href="{{ url_for('dashboard', tag=t) }}" class="badge {% if tag_filter == t %}bg-primary{% else %}bg-secondary{% endif %} text-decoration-none">#{{ t }}</a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary small mb-0">No tags yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Snippet list -->
+    <div class="col-md-9">
+        <!-- Search -->
+        <form class="mb-3" method="GET">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control bg-dark text-light border-secondary" placeholder="Search snippets..." value="{{ query }}">
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+
+        {% if snippets.items %}
+        {% for snippet in snippets.items %}
+        <div class="card bg-black border-secondary mb-2 snippet-card">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">
+                            <a href="{{ url_for('view_snippet', uuid=snippet.uuid) }}" class="text-light text-decoration-none">{{ snippet.title }}</a>
+                            {% if snippet.is_public %}
+                            <span class="badge bg-success ms-1" title="Public"><i class="bi bi-globe"></i></span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark ms-1" title="Private"><i class="bi bi-lock"></i></span>
+                            {% endif %}
+                        </h5>
+                        <span class="badge bg-primary">{{ snippet.language }}</span>
+                        {% for tag in snippet.tag_list() %}
+                        <a href="{{ url_for('dashboard', tag=tag) }}" class="badge bg-secondary text-decoration-none">#{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                    <div class="text-nowrap">
+                        <a href="{{ url_for('edit_snippet', uuid=snippet.uuid) }}" class="btn btn-sm btn-outline-info" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ url_for('delete_snippet', uuid=snippet.uuid) }}" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this snippet?')"><i class="bi bi-trash"></i></a>
+                    </div>
+                </div>
+                <div class="small text-secondary mt-1">
+                    Updated {{ snippet.updated_at.strftime('%b %d, %Y at %H:%M') }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if snippets.has_prev %}
+                <li class="page-item"><a class="page-link bg-dark text-light border-secondary" href="{{ url_for('dashboard', page=snippets.prev_num, q=query, tag=tag_filter) }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link bg-dark text-secondary border-secondary">Page {{ snippets.page }} of {{ snippets.pages }}</span></li>
+                {% if snippets.has_next %}
+                <li class="page-item"><a class="page-link bg-dark text-light border-secondary" href="{{ url_for('dashboard', page=snippets.next_num, q=query, tag=tag_filter) }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% else %}
+        <div class="text-center py-5 text-secondary">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-2">No snippets yet. <a href="{{ url_for('create_snippet') }}" class="text-info">Create your first one!</a></p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

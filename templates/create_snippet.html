@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'create' %}New Snippet{% else %}Edit Snippet{% endif %} — SnippetVault{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card bg-black border-secondary">
+            <div class="card-body p-4">
+                <h3 class="mb-4">
+                    {% if mode == 'create' %}
+                    <i class="bi bi-plus-circle"></i> New Snippet
+                    {% else %}
+                    <i class="bi bi-pencil"></i> Edit Snippet
+                    {% endif %}
+                </h3>
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control bg-dark text-light border-secondary", placeholder="e.g. Quick sort in Python") }}
+                        {% for error in form.title.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.language.label(class="form-label") }}
+                        {{ form.language(class="form-select bg-dark text-light border-secondary") }}
+                        {% for error in form.language.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.code.label(class="form-label") }}
+                        {{ form.code(class="form-control bg-dark text-light border-secondary font-monospace", rows=12, placeholder="Paste your code here...") }}
+                        {% for error in form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.tags.label(class="form-label") }}
+                        {{ form.tags(class="form-control bg-dark text-light border-secondary", placeholder="e.g. python, sorting, algorithm") }}
+                        <div class="form-text text-secondary">Separate tags with commas.</div>
+                        {% for error in form.tags.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-4 form-check">
+                        {{ form.is_public(class="form-check-input") }}
+                        {{ form.is_public.label(class="form-check-label") }}
+                    </div>
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

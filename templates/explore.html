@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Explore — SnippetVault{% endblock %}
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-compass"></i> Explore Public Snippets</h3>
+
+<form class="row g-2 mb-4" method="GET">
+    <div class="col-md-6">
+        <input type="text" name="q" class="form-control bg-dark text-light border-secondary" placeholder="Search snippets..." value="{{ query }}">
+    </div>
+    <div class="col-md-3">
+        <select name="lang" class="form-select bg-dark text-light border-secondary">
+            <option value="">All Languages</option>
+            {% for val, label in languages %}
+            <option value="{{ val }}" {% if lang == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-search"></i> Search</button>
+    </div>
+</form>
+
+{% if snippets.items %}
+<div class="row">
+    {% for snippet in snippets.items %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card bg-black border-secondary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title text-truncate">{{ snippet.title }}</h5>
+                    <span class="badge bg-primary">{{ snippet.language }}</span>
+                </div>
+                <pre class="preview-code mt-2">{{ snippet.code[:150] }}{% if snippet.code|length > 150 %}...{% endif %}</pre>
+                <div class="mt-2">
+                    {% for tag in snippet.tag_list() %}
+                    <a href="{{ url_for('explore', tag=tag) }}" class="badge bg-secondary text-decoration-none">#{{ tag }}</a>
+                    {% endfor %}
+                </div>
+                <div class="small text-secondary mt-2">
+                    by <a href="{{ url_for('user_profile', username=snippet.author.username) }}" class="text-info">{{ snippet.author.username }}</a>
+                    &middot; {{ snippet.created_at.strftime('%b %d, %Y') }}
+                    <a href="{{ url_for('view_snippet', uuid=snippet.uuid) }}" class="float-end text-info">View <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+        {% if snippets.has_prev %}
+        <li class="page-item"><a class="page-link bg-dark text-light border-secondary" href="{{ url_for('explore', page=snippets.prev_num, q=query, lang=lang, tag=tag) }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link bg-dark text-secondary border-secondary">Page {{ snippets.page }} of {{ snippets.pages }}</span></li>
+        {% if snippets.has_next %}
+        <li class="page-item"><a class="page-link bg-dark text-light border-secondary" href="{{ url_for('explore', page=snippets.next_num, q=query, lang=lang, tag=tag) }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% else %}
+<div class="text-center py-5 text-secondary">
+    <i class="bi bi-search" style="font-size: 3rem;"></i>
+    <p class="mt-2">No public snippets found.</p>
+</div>
+{% endif %}
+{% endblock %}

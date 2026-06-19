@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.username }} — SnippetVault{% endblock %}
+{% block content %}
+<div class="text-center mb-4">
+    {% if profile_user.avatar_url %}
+    <img src="{{ profile_user.avatar_url }}" alt="" class="rounded-circle border border-secondary" style="width: 80px; height: 80px; object-fit: cover;">
+    {% else %}
+    <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
+    {% endif %}
+    <h3 class="mt-2">{{ profile_user.username }}</h3>
+    <p class="text-secondary">
+        <i class="bi bi-{{ 'google' if profile_user.oauth_provider == 'google' else 'github' }}"></i>
+        {{ profile_user.oauth_provider | capitalize }} user
+        &middot; Joined {{ profile_user.created_at.strftime('%B %Y') }}
+    </p>
+</div>
+
+<h4><i class="bi bi-code-square"></i> Public Snippets</h4>
+
+{% if snippets %}
+<div class="row">
+    {% for snippet in snippets %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card bg-black border-secondary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title text-truncate">{{ snippet.title }}</h5>
+                    <span class="badge bg-primary">{{ snippet.language }}</span>
+                </div>
+                <pre class="preview-code mt-2">{{ snippet.code[:150] }}{% if snippet.code|length > 150 %}...{% endif %}</pre>
+                <div class="mt-2">
+                    {% for tag in snippet.tag_list() %}
+                    <span class="badge bg-secondary">#{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                <div class="small text-secondary mt-2">
+                    {{ snippet.created_at.strftime('%b %d, %Y') }}
+                    <a href="{{ url_for('view_snippet', uuid=snippet.uuid) }}" class="float-end text-info">View <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-secondary">No public snippets yet.</p>
+{% endif %}
+{% endblock %}

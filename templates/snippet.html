@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ snippet.title }} — SnippetVault{% endblock %}
+{% block extra_head %}
+<style>
+    .highlight { background: #272822; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+    .highlight pre { margin: 0; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap">
+            <div>
+                <h3 class="mb-1">{{ snippet.title }}</h3>
+                <div>
+                    <span class="badge bg-primary">{{ snippet.language }}</span>
+                    {% if snippet.is_public %}
+                    <span class="badge bg-success"><i class="bi bi-globe"></i> Public</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-lock"></i> Private</span>
+                    {% endif %}
+                    {% for tag in snippet.tag_list() %}
+                    <span class="badge bg-secondary">#{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="mt-2 mt-md-0">
+                {% if current_user.is_authenticated and current_user.id == snippet.author_id %}
+                <a href="{{ url_for('edit_snippet', uuid=snippet.uuid) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-pencil"></i> Edit</a>
+                <a href="{{ url_for('delete_snippet', uuid=snippet.uuid) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this snippet?')"><i class="bi bi-trash"></i> Delete</a>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-success" onclick="copySnippet()"><i class="bi bi-clipboard"></i> Copy</button>
+            </div>
+        </div>
+
+        <div class="card bg-black border-secondary mb-4">
+            <div class="card-body p-0">
+                {{ snippet.highlighted_code() }}
+            </div>
+        </div>
+
+        <div class="small text-secondary">
+            <p class="mb-1">by <a href="{{ url_for('user_profile', username=snippet.author.username) }}" class="text-info">{{ snippet.author.username }}</a></p>
+            <p class="mb-1">Created: {{ snippet.created_at.strftime('%b %d, %Y at %H:%M') }}</p>
+            <p>Updated: {{ snippet.updated_at.strftime('%b %d, %Y at %H:%M') }}</p>
+            <div class="input-group mb-3" style="max-width: 500px;">
+                <input type="text" class="form-control bg-dark text-light border-secondary form-control-sm" id="shareLink" value="{{ url_for('view_snippet', uuid=snippet.uuid, _external=True) }}" readonly>
+                <button class="btn btn-outline-secondary btn-sm" onclick="copyShareLink()">Copy Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copySnippet() {
+    const code = {{ snippet.code|tojson }};
+    navigator.clipboard.writeText(code).then(() => {
+        alert('Code copied to clipboard!');
+    });
+}
+function copyShareLink() {
+    const link = document.getElementById('shareLink');
+    link.select();
+    navigator.clipboard.writeText(link.value).then(() => {
+        alert('Link copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}
