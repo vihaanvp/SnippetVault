@@ -16,8 +16,9 @@ build/
 .env.*
 !/.env.example
 
-# Database (will be on a volume)
+# Database & persistent config (will be on a bind mount)
 instance/
+data/
 *.db
 *.db-bak
 *.bak

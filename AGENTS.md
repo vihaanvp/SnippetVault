@@ -1,26 +1,33 @@
 # SnippetVault — Agent Guide
 
-Single-file Flask app (`app.py`). OAuth-only auth (Google + GitHub). SQLite. Docker.
+Single-file Flask app (`app.py`). Email + OAuth auth (Google + GitHub). SQLite. Docker.
+
+Zero-config startup: `git clone && cd SnippetVault && docker compose up -d` — works out of the box
+with email/password auth. No `.env` file needed.
 
 ## Quick start
 
 ```bash
+# Docker (zero config — no .env needed)
+docker compose up -d   # → http://localhost:5001
+
+# Local development
 pip install -r requirements.txt
-cp .env.example .env   # fill in OAuth secrets
-python app.py          # opens http://127.0.0.1:5001
+cp .env.example .env   # optional — app works without it
+python app.py          # → http://127.0.0.1:5001
 ```
 
-## Auth modes (config.json)
+## Auth modes (data/config.json)
 
-Edit `config.json` in the project root:
+Edit `data/config.json` (auto-created on first start, persistent via bind mount):
 
 ```json
-{ "auth_mode": 3, "allow_registration": true }
+{ "auth_mode": 3 }
 ```
 
 | Mode | Behavior |
 |------|----------|
-| `1` | **Email/password only** — register + login forms. OAuth routes return 404. |
+| `1` | **Email/password only** — register + login forms. OAuth routes not defined. |
 | `2` | **OAuth only** (Google + GitHub) — no register route, no password fields. |
 | `3` | **Both** — email/password AND OAuth side by side. |
 
@@ -32,7 +39,7 @@ Set `ALLOW_REGISTRATION=false` in `.env` to disable new account creation (existi
 
 ## User Roles
 
-Roles are assigned via `roles.json`, which lives in the same directory as the database (`DATABASE_DIR`). Format:
+Roles are assigned via `roles.json`, which lives in the same directory as the database (`DATABASE_DIR`). Auto-created if missing. Format:
 
 ```json
 {
@@ -43,7 +50,7 @@ Roles are assigned via `roles.json`, which lives in the same directory as the da
 
 - Any email not in the file gets the default role of `"user"`.
 - Roles are synced on login and at startup (in `init_db()`).
-- The `roles.json` file persists across container restarts (Docker volume).
+- The `roles.json` file persists across container restarts (bind mount).
 - The `User` model has a `role` column (string, default `"user"`).
 
 Templates receive `allow_registration` via the context processor — use it to conditionally render the registration link.
@@ -57,9 +64,10 @@ Templates receive `allow_registration` via the context processor — use it to c
 
 Port: `PORT` env (default `5001`). Host: `HOST` env (default `0.0.0.0`).
 
-## Auth — OAuth only
+## OAuth
 
-**No password auth, no register route.** Users sign in exclusively via Google or GitHub.
+OAuth is **only enabled if credentials are configured**. If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`
+are empty (no `.env` file), Google login buttons and routes are simply absent. Same for GitHub.
 
 - `/login/google` → redirects to Google consent → `/login/google/authorize`
 - `/login/github` → redirects to GitHub → `/login/github/authorize`
@@ -69,55 +77,65 @@ Port: `PORT` env (default `5001`). Host: `HOST` env (default `0.0.0.0`).
 
 ## Database
 
-- SQLite at `DATABASE_DIR/snippets.db` (`DATABASE_DIR` defaults to `instance/`).
+- SQLite at `DATABASE_DIR/snippets.db` (in Docker: `/app/data/snippets.db`).
 - Created and migrated via `init_db()` (runs at startup). **No Alembic / migration tool.** Schema changes require deleting the old `.db` file.
 - WAL mode enabled on every startup (`PRAGMA journal_mode=WAL`).
-- Docker: mount a volume at `/app/data` and set `DATABASE_DIR=/app/data`.
+- Docker: bind mount at `./data:/app/data`.
 
 ## Env vars (all via `.env` or environment)
 
-| Var | Required | Notes |
-|-----|----------|-------|
-| `SECRET_KEY` | No | Auto-generated if missing (invalidates sessions on restart) |
-| `GOOGLE_CLIENT_ID` | Yes | |
-| `GOOGLE_CLIENT_SECRET` | Yes | |
-| `GITHUB_CLIENT_ID` | Yes | |
-| `GITHUB_CLIENT_SECRET` | Yes | |
-| `PUBLIC_URL` | No | — | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind reverse proxies |
-| `ALLOW_REGISTRATION` | No | `true` | Set `false` to disable new signups |
-| `PREFERRED_URL_SCHEME` | No | `https` | Set `http` for local dev without TLS |
-| `DATABASE_DIR` | No | Defaults to `instance/` |
-| `PORT` | No | Default `5001` |
-| `HOST` | No | Default `0.0.0.0` |
-| `WAITRESS` | No | Set `1` for production |
+**None are required.** The app works with email/password auth straight out of the box.
+
+| Var | Notes |
+|-----|-------|
+| `SECRET_KEY` | Auto-generated & persisted on first start |
+| `GOOGLE_CLIENT_ID` | Leave empty to disable Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | Leave empty to disable Google OAuth |
+| `GITHUB_CLIENT_ID` | Leave empty to disable GitHub OAuth |
+| `GITHUB_CLIENT_SECRET` | Leave empty to disable GitHub OAuth |
+| `PUBLIC_URL` | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind reverse proxies |
+| `ALLOW_REGISTRATION` | Default `true`. Set `false` to disable new signups |
+| `PREFERRED_URL_SCHEME` | Default `https`. Set `http` for local dev without TLS |
+| `DATABASE_DIR` | Default `/app/data` (Docker) or `data/` (local) |
+| `PORT` | Default `5001` |
+| `HOST` | Default `0.0.0.0` |
+| `WAITRESS` | Set `1` for production (default in Docker) |
 
 ## Docker
 
 ```bash
-cp .env.example .env   # fill secrets
+# Zero config — just run it:
 docker compose up -d   # → http://localhost:5001
+
+# With custom settings:
+cp .env.example .env   # fill in secrets
+docker compose up -d
 ```
 
 - Multi-stage build (`python:3.12-slim`), non-root user `snippet` (uid 1000).
+- Entrypoint auto-creates `data/config.json`, `data/roles.json`, and persists `SECRET_KEY`.
 - Healthcheck at `GET /health` → `{"status": "ok"}`.
-- Persistent data at `./data/` (bind mount) — contains `snippets.db` and `roles.json`.
+- Persistent data at `./data/` (bind mount) — contains `config.json`, `snippets.db`, `roles.json`.
 - `WAITRESS=1` set by default in the image.
 
 ## Project structure
 
 ```
-├── config.json          # auth_mode: 1 (email), 2 (OAuth), 3 (both)
-├── app.py              # entrypoint — Flask app, models, routes, forms
+├── app.py              # Flask app, models, routes, forms
 ├── requirements.txt
 ├── Dockerfile
+├── entrypoint.sh       # Auto-creates config files on container start
 ├── docker-compose.yml
-├── .env.example
-├── data/               # Persistent data (snippets.db, roles.json) — bind mount
-│   └── .gitkeep
+├── .env.example        # Template for custom settings (optional)
+├── data/               # Persistent data (bind mount into /app/data)
+│   ├── config.json     #   auth_mode setting (auto-created)
+│   ├── snippets.db     #   SQLite database
+│   ├── roles.json      #   Role overrides (auto-created)
+│   └── .secret_key     #   Persisted SECRET_KEY (auto-generated)
 ├── static/css/style.css
 └── templates/           # Jinja2 + Bootstrap 5
     ├── base.html
-    ├── login.html       # email form and/or OAuth buttons (depends on auth_mode)
+    ├── login.html       # email form and/or OAuth buttons
     ├── register.html    # email/password registration (modes 1 & 3 only)
     ├── index.html
     ├── dashboard.html
@@ -133,10 +151,10 @@ docker compose up -d   # → http://localhost:5001
 | Path | Auth | Purpose |
 |------|------|---------|
 | `/health` | No | Health check |
-| `/login` | No | Login page (email form in modes 1/3, OAuth buttons in modes 2/3) |
-| `/register` | No | Register page (mode 1/3 only; 404 in mode 2) |
-| `/login/google` → `/login/google/authorize` | No | Google OAuth flow (mode 2/3 only; 404 in mode 1) |
-| `/login/github` → `/login/github/authorize` | No | GitHub OAuth flow (mode 2/3 only; 404 in mode 1) |
+| `/login` | No | Login page (email form in modes 1/3, OAuth buttons if configured) |
+| `/register` | No | Register page (mode 1/3 only) |
+| `/login/google` → `/login/google/authorize` | No | Google OAuth (only if configured) |
+| `/login/github` → `/login/github/authorize` | No | GitHub OAuth (only if configured) |
 | `/logout` | Yes | Log out |
 | `/dashboard` | Yes | User's snippets, search, tag filter |
 | `/snippet/new` | Yes | Create snippet |
@@ -155,3 +173,4 @@ docker compose up -d   # → http://localhost:5001
 - **No frontend build step.** Bootstrap 5 + Bootstrap Icons loaded from CDN. Pygments CSS injected inline.
 - **No tests exist.** No CI config. No linting/formatting config.
 - **No migrations.** Schema changes = delete `snippets.db` and restart.
+- **Config precedence**: `data/config.json` takes priority, falls back to project-root `config.json` for backward compat.

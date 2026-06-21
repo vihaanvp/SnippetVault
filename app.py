@@ -27,10 +27,27 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+def _get_config_path():
+    """Find config.json: check DATABASE_DIR first, then project root."""
+    db_dir = os.getenv("DATABASE_DIR", "")
+    if db_dir:
+        candidate = os.path.join(db_dir, "config.json")
+        if os.path.exists(candidate):
+            return candidate
+    # Fall back to project root (local dev / backward compat)
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    candidate = os.path.join(project_root, "config.json")
+    if os.path.exists(candidate):
+        return candidate
+    # Neither exists — prefer DATABASE_DIR if set (entrypoint creates it there)
+    if db_dir:
+        return os.path.join(db_dir, "config.json")
+    return os.path.join(project_root, "config.json")
 
-def _load_config():
-    """Read config.json. Creates file with defaults if missing."""
+_CONFIG_PATH = _get_config_path()
+
+def _ensure_config():
+    """Create config.json with defaults if missing."""
     defaults = {
         "auth_mode": 3,
         "_comment": [
@@ -41,9 +58,13 @@ def _load_config():
         ],
     }
     if not os.path.exists(_CONFIG_PATH):
+        os.makedirs(os.path.dirname(_CONFIG_PATH) or ".", exist_ok=True)
         with open(_CONFIG_PATH, "w") as f:
             json.dump(defaults, f, indent=4)
-        return defaults
+
+def _load_config():
+    """Read config.json."""
+    _ensure_config()
     try:
         with open(_CONFIG_PATH) as f:
             data = json.load(f)
@@ -53,7 +74,7 @@ def _load_config():
         data["auth_mode"] = mode
         return data
     except (json.JSONDecodeError, OSError):
-        return defaults
+        return {"auth_mode": 3}
 
 
 _CONFIG = _load_config()
@@ -130,30 +151,39 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 # ---------------------------------------------------------------------------
-# OAuth (loaded only in modes 2 & 3)
+# OAuth (loaded only in modes 2 & 3; skips providers with missing creds)
 # ---------------------------------------------------------------------------
 oauth = OAuth(app)
 
 _USE_OAUTH = AUTH_MODE in (2, 3)
+_OAUTH_PROVIDERS = []  # tracks which providers have credentials configured
 
 if _USE_OAUTH:
-    oauth.register(
-        name="google",
-        client_id=os.getenv("GOOGLE_CLIENT_ID"),
-        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_kwargs={"scope": "openid email profile"},
-    )
+    _google_id = os.getenv("GOOGLE_CLIENT_ID")
+    _google_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if _google_id and _google_secret:
+        oauth.register(
+            name="google",
+            client_id=_google_id,
+            client_secret=_google_secret,
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
+        _OAUTH_PROVIDERS.append("google")
 
-    oauth.register(
-        name="github",
-        client_id=os.getenv("GITHUB_CLIENT_ID"),
-        client_secret=os.getenv("GITHUB_CLIENT_SECRET"),
-        access_token_url="https://github.com/login/oauth/access_token",
-        authorize_url="https://github.com/login/oauth/authorize",
-        api_base_url="https://api.github.com/",
-        client_kwargs={"scope": "user:email"},
-    )
+    _github_id = os.getenv("GITHUB_CLIENT_ID")
+    _github_secret = os.getenv("GITHUB_CLIENT_SECRET")
+    if _github_id and _github_secret:
+        oauth.register(
+            name="github",
+            client_id=_github_id,
+            client_secret=_github_secret,
+            access_token_url="https://github.com/login/oauth/access_token",
+            authorize_url="https://github.com/login/oauth/authorize",
+            api_base_url="https://api.github.com/",
+            client_kwargs={"scope": "user:email"},
+        )
+        _OAUTH_PROVIDERS.append("github")
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +344,7 @@ def load_user(user_id):
 def inject_globals():
     return {
         "auth_mode": AUTH_MODE,
-        "use_oauth": _USE_OAUTH,
+        "oauth_providers": _OAUTH_PROVIDERS,
         "use_email_auth": _USE_EMAIL_AUTH,
         "allow_registration": ALLOW_REGISTRATION,
     }
@@ -414,8 +444,8 @@ if _USE_EMAIL_AUTH:
         return render_template("register.html", form=form)
 
 
-# --- OAuth routes (modes 2 & 3) ---
-if _USE_OAUTH:
+# --- OAuth routes (only defined for providers with configured credentials) ---
+if "google" in _OAUTH_PROVIDERS:
 
     @app.route("/login/google")
     def login_google():
@@ -444,6 +474,9 @@ if _USE_OAUTH:
         login_user(user, remember=True)
         flash(f"Welcome, {user.username}!", "success")
         return redirect(url_for("dashboard"))
+
+
+if "github" in _OAUTH_PROVIDERS:
 
     @app.route("/login/github")
     def login_github():

@@ -25,19 +25,23 @@
                 </form>
                 {% endif %}
 
-                {% if use_oauth %}
-                <!-- OAuth buttons -->
+                {% if oauth_providers %}
+                <!-- OAuth buttons (only for providers with configured credentials) -->
                 {% if use_email_auth %}<hr class="border-secondary"><p class="text-secondary small mb-3">Or continue with</p>{% endif %}
 
+                {% if 'google' in oauth_providers %}
                 <a href="{{ url_for('login_google') }}" class="btn btn-outline-light w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
                     <i class="bi bi-google" style="font-size: 1.2rem;"></i>
                     Continue with Google
                 </a>
+                {% endif %}
 
+                {% if 'github' in oauth_providers %}
                 <a href="{{ url_for('login_github') }}" class="btn btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2">
                     <i class="bi bi-github" style="font-size: 1.2rem;"></i>
                     Continue with GitHub
                 </a>
+                {% endif %}
                 {% endif %}
 
                 {% if use_email_auth %}

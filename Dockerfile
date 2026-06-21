@@ -35,6 +35,9 @@ COPY --chown=snippet:snippet . .
 # Data directory (mount a volume here for persistence)
 RUN mkdir -p /app/data && chown snippet:snippet /app/data
 
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
 # Switch to non-root user
 USER snippet
 
@@ -46,4 +49,5 @@ EXPOSE 5001
 
 # Run with Waitress in production by default
 ENV WAITRESS=1
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "app.py"]
