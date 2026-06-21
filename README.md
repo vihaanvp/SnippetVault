@@ -21,9 +21,13 @@
 
 ## Quick Start
 
+### Option A — Docker Compose (recommended)
+
+Pulls the pre-built multi-arch image (amd64 + arm64) from GitHub Container Registry:
+
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/SnippetVault.git
+git clone https://github.com/vihaanvp/SnippetVault.git
 cd SnippetVault
 
 # 2. Configure environment
@@ -33,12 +37,34 @@ cp .env.example .env
 # 3. Configure auth mode
 # Edit config.json – set auth_mode to 1 (email), 2 (OAuth), or 3 (both)
 
+# 4. Run
+docker compose up -d
+# → Open http://localhost:5001
+```
+
+### Option B — From Release Tarball
+
+No git clone needed — download the source from [GitHub Releases](https://github.com/vihaanvp/SnippetVault/releases):
+
+```bash
+# 1. Download the tarball
+#    https://github.com/vihaanvp/SnippetVault/releases/download/v1.0.0/snippetvault-v1.0.0.tar
+
+# 2. Extract
+tar xf snippetvault-v1.0.0.tar
+cd snippetvault-v1.0.0
+
+# 3. Configure
+cp .env.example .env
+# Edit .env with your SECRET_KEY and OAuth credentials (if using OAuth)
+# Edit config.json – set auth_mode (default 3)
+
 # 4. Run with Docker
 docker compose up -d
 # → Open http://localhost:5001
 ```
 
-Or run without Docker:
+### Option C — Without Docker
 
 ```bash
 pip install -r requirements.txt
@@ -71,6 +97,7 @@ Change `auth_mode` in `config.json` and restart the app.
 | `GOOGLE_CLIENT_SECRET` | OAuth only | — | Google OAuth client secret |
 | `GITHUB_CLIENT_ID` | OAuth only | — | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | OAuth only | — | GitHub OAuth client secret |
+| `PUBLIC_URL` | Behind proxy | — | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind Cloudflare Tunnel / reverse proxies. |
 | `PREFERRED_URL_SCHEME` | No | `https` | Use `http` for local dev without TLS |
 | `DATABASE_DIR` | No | *(app root)* | Custom directory for `snippets.db` |
 | `PORT` | No | `5001` | Server port (outside Docker) |
@@ -84,6 +111,8 @@ Register these in your OAuth provider's console:
 - **GitHub**: `https://<your-domain>/login/github/authorize`
 
 For local development use `http://localhost:5001/...` and set `PREFERRED_URL_SCHEME=http`.
+
+> **Behind a reverse proxy (Cloudflare Tunnel, nginx, etc.)?** Set `PUBLIC_URL=https://<your-domain>` in `.env` to ensure OAuth redirects use the correct scheme and host regardless of internal forwarding headers.
 
 ---
 
@@ -134,13 +163,24 @@ SnippetVault/
 
 ## Building a Docker Image
 
+Pre-built multi-arch images are available at `ghcr.io/vihaanvp/snippetvault` — see the [Releases](https://github.com/vihaanvp/SnippetVault/releases) page for tagged versions.
+
+To build locally:
+
 ```bash
+# From the project directory
 docker build -t snippetvault:latest .
-docker tag snippetvault:latest <your-registry>/snippetvault:latest
-docker push <your-registry>/snippetvault:latest
 ```
 
-Pre-built images can be placed in `builds/` (excluded from git).
+Or from the release tarball:
+
+```bash
+tar xf snippetvault-v1.0.0.tar
+cd snippetvault-v1.0.0
+docker build -t snippetvault:latest .
+```
+
+Build artifacts are stored in `builds/` (gitignored) for your own releases.
 
 ---
 
