@@ -148,8 +148,12 @@ SnippetVault/
 ├── static/             # Static assets (CSS, JS)
 ├── requirements.txt
 ├── Dockerfile          # Multi-stage build
+├── entrypoint.sh       # Auto-creates config files on container start
 ├── docker-compose.yml  # Compose definition with bind mount
 ├── .env.example        # Env var template (optional — app runs without it)
+├── CHANGELOG.md        # Version history
+├── CONTRIBUTING.md     # Contribution guidelines
+├── PRIVACY_POLICY.md   # Data handling and privacy
 ├── AGENTS.md           # Developer reference
 ├── builds/             # Docker build artifacts (gitignored)
 └── .gitignore
@@ -212,7 +216,14 @@ Build artifacts are stored in `builds/` (gitignored) for your own releases.
 - **OAuth**: Only enabled when credentials are configured. Missing credentials = no OAuth buttons.
 
 ---
-
 ## License
 
 [MIT](LICENSE)
+
+---
+## More
+
+- [Contributing Guidelines](CONTRIBUTING.md) — how to help improve SnippetVault
+- [Privacy Policy](PRIVACY_POLICY.md) — what data is collected and how it's handled
+- [Changelog](CHANGELOG.md) — version history and release notes
+- [Agent Guide](AGENTS.md) — internal developer reference for AI coding assistants
