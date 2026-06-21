@@ -60,27 +60,23 @@ python app.py
 
 ---
 
-## Authentication Modes
+## Configuration (`data/config.json`)
 
-| Mode | `config.json` | Description |
-|------|---------------|-------------|
-| 1    | `"auth_mode": 1` | Email/password only (register + login) |
-| 2    | `"auth_mode": 2` | OAuth only (Google + GitHub) – no password forms |
-| 3    | `"auth_mode": 3` | Both email/password and OAuth |
+All settings live in `data/config.json` (auto-created on first start, persists in bind mount):
 
-Change `auth_mode` in `config.json` and restart the app.
-
-### Registration Toggle
-
-Add `ALLOW_REGISTRATION=false` to your `.env` file and restart. Existing users can still log in. Default is `true`.
-
-```bash
-# In .env:
-ALLOW_REGISTRATION=false
-
-# Then restart:
-docker compose up -d
+```json
+{
+    "auth_mode": 3,
+    "allow_registration": true
+}
 ```
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| `auth_mode` | `1`, `2`, `3` | `3` | 1=Email only, 2=OAuth only, 3=Both |
+| `allow_registration` | `true`, `false` | `true` | Set `false` to disable new signups |
+
+Change any value and restart: `docker compose up -d`
 
 ### User Roles
 
@@ -118,34 +114,10 @@ cp .env.example .env   # then edit
 | `GITHUB_CLIENT_ID` | *(empty — disabled)* | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | *(empty — disabled)* | GitHub OAuth client secret |
 | `PUBLIC_URL` | *(empty)* | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind Cloudflare Tunnel / reverse proxies. |
-| `ALLOW_REGISTRATION` | `true` | Set `false` to disable new signups |
 | `PREFERRED_URL_SCHEME` | `https` | Set `http` for local dev without TLS |
 | `DATABASE_DIR` | `/app/data` (Docker) | Custom directory for `snippets.db` |
 | `PORT` | `5001` | Server port |
 | `WAITRESS` | *(unset)* | Set `1` to use Waitress production server |
-
-### Auth Mode (`data/config.json`)
-
-Edit `data/config.json` (auto-created on first start, persists in bind mount):
-
-```json
-{ "auth_mode": 3 }
-```
-
-| Mode | Description |
-|------|-------------|
-| `1` | Email/password only |
-| `2` | OAuth only (Google + GitHub) |
-| `3` | Both email/password and OAuth |
-
-### Registration Toggle
-
-Add `ALLOW_REGISTRATION=false` to `.env` to stop new signups (existing users can still log in):
-
-```bash
-echo "ALLOW_REGISTRATION=false" >> .env
-docker compose up -d
-```
 
 ### OAuth Callback URLs
 

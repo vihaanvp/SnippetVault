@@ -15,15 +15,20 @@ if [ ! -f /app/data/config.json ]; then
     cat > /app/data/config.json << 'EOF'
 {
     "auth_mode": 3,
+    "allow_registration": true,
     "_comment": [
-        "Authentication mode:",
+        "Authentication mode (auth_mode):",
         "  1 = Email/password only (register + login forms)",
         "  2 = External OAuth only (Google + GitHub)",
-        "  3 = Both email/password and OAuth (default)"
+        "  3 = Both email/password and OAuth (default)",
+        "",
+        "Registration toggle (allow_registration):",
+        "  Set to false to disable new account signups.",
+        "  Existing users can still log in."
     ]
 }
 EOF
-    echo "[entrypoint] Created /app/data/config.json with default auth_mode=3"
+    echo "[entrypoint] Created /app/data/config.json with auth_mode=3, allow_registration=true"
 fi
 
 # --- Auto-create roles.json if missing ---

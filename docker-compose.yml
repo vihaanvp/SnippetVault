@@ -38,9 +38,7 @@ services:
       # --- Public URL (must match your domain exactly) ---
       # Set this if OAuth redirects fail behind a reverse proxy.
       - PUBLIC_URL=${PUBLIC_URL:-}
-      # --- Registration toggle ---
-      # Set to "false" to disable new account registration.
-      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-true}
+      # --- Registration toggle (in data/config.json) ---
       # --- URL scheme (http if behind plain HTTP reverse proxy) ---
       - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
       # --- Database path (inside container) ---
