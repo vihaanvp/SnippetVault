@@ -62,6 +62,9 @@ if [ "$(id -u)" = "0" ]; then
     # Drop privileges to snippet user, preserving CWD, environment, PATH.
     # setpriv is from util-linux and does NOT change the working directory
     # (unlike su or chroot, which both chdir to / or $HOME).
+    # We must set HOME explicitly — it's still /root from running as root,
+    # but Python's site.USER_SITE uses HOME to find pip --user packages.
+    export HOME=/home/snippet
     exec setpriv --reuid=1000 --regid=1000 --init-groups "$@"
 fi
 
