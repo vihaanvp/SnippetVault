@@ -1,1 +1,1 @@
-{"auth_mode": 3, "_comment": ["1 = Email only", "2 = OAuth only", "3 = Both"]}
+{"auth_mode": 2, "_comment": ["1 = Email only", "2 = OAuth only", "3 = Both"]}
