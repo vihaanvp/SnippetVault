@@ -86,7 +86,15 @@ Change `auth_mode` in `config.json` and restart the app.
 
 ### Registration Toggle
 
-Add `"allow_registration": false` to `config.json` to disable new account creation. Existing users can still log in. Default is `true`.
+Add `ALLOW_REGISTRATION=false` to your `.env` file and restart. Existing users can still log in. Default is `true`.
+
+```bash
+# In .env:
+ALLOW_REGISTRATION=false
+
+# Then restart:
+docker compose up -d
+```
 
 ### User Roles
 
@@ -118,6 +126,7 @@ Create a `roles.json` file in the `data/` directory to assign roles by email:
 | `GITHUB_CLIENT_ID` | OAuth only | — | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | OAuth only | — | GitHub OAuth client secret |
 | `PUBLIC_URL` | Behind proxy | — | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind Cloudflare Tunnel / reverse proxies. |
+| `ALLOW_REGISTRATION` | No | `true` | Set to `false` to disable new signups. |
 | `PREFERRED_URL_SCHEME` | No | `https` | Use `http` for local dev without TLS |
 | `DATABASE_DIR` | No | *(app root)* | Custom directory for `snippets.db` |
 | `PORT` | No | `5001` | Server port (outside Docker) |

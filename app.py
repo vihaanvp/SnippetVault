@@ -33,16 +33,11 @@ def _load_config():
     """Read config.json. Creates file with defaults if missing."""
     defaults = {
         "auth_mode": 3,
-        "allow_registration": True,
         "_comment": [
             "Authentication mode:",
             "  1 = Email/password only (register + login forms)",
             "  2 = External OAuth only (Google + GitHub)",
             "  3 = Both email/password and OAuth (default)",
-            "",
-            "allow_registration:",
-            "  false = New registrations are disabled (existing users can still log in).",
-            "  true  = Anyone can register (default).",
         ],
     }
     if not os.path.exists(_CONFIG_PATH):
@@ -56,7 +51,6 @@ def _load_config():
         if mode not in (1, 2, 3):
             mode = 3
         data["auth_mode"] = mode
-        data["allow_registration"] = data.get("allow_registration", True)
         return data
     except (json.JSONDecodeError, OSError):
         return defaults
@@ -64,7 +58,16 @@ def _load_config():
 
 _CONFIG = _load_config()
 AUTH_MODE = _CONFIG["auth_mode"]
-ALLOW_REGISTRATION = _CONFIG["allow_registration"]
+
+# Registration toggle — env var takes precedence, falls back to config.json, defaults true
+_ALLOW_REG_CFG = _CONFIG.get("allow_registration", True)
+_ALLOW_REG_ENV = os.getenv("ALLOW_REGISTRATION", "").strip().lower()
+if _ALLOW_REG_ENV in ("1", "true", "yes"):
+    ALLOW_REGISTRATION = True
+elif _ALLOW_REG_ENV in ("0", "false", "no"):
+    ALLOW_REGISTRATION = False
+else:
+    ALLOW_REGISTRATION = bool(_ALLOW_REG_CFG)
 
 # Roles file — maps email → role (e.g. "admin@example.com": "admin")
 # Lives next to config.json so the admin can edit it directly.

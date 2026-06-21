@@ -28,7 +28,7 @@ The `auth_mode` value is read once at startup. Restart the app after changing it
 
 ### Registration toggle
 
-Set `"allow_registration": false` in `config.json` to disable new account creation (existing users can still log in). This applies to both email/password and OAuth registration.
+Set `ALLOW_REGISTRATION=false` in `.env` to disable new account creation (existing users can still log in). This applies to both email/password and OAuth registration. The env var takes precedence over `allow_registration` in `config.json`.
 
 ## User Roles
 
@@ -83,7 +83,9 @@ Port: `PORT` env (default `5001`). Host: `HOST` env (default `0.0.0.0`).
 | `GOOGLE_CLIENT_SECRET` | Yes | |
 | `GITHUB_CLIENT_ID` | Yes | |
 | `GITHUB_CLIENT_SECRET` | Yes | |
-| `PREFERRED_URL_SCHEME` | No | Default `https`. Set `http` for local dev without TLS |
+| `PUBLIC_URL` | No | — | Full public URL (e.g. `https://snippetvault.example.com`). Fixes OAuth redirects behind reverse proxies |
+| `ALLOW_REGISTRATION` | No | `true` | Set `false` to disable new signups |
+| `PREFERRED_URL_SCHEME` | No | `https` | Set `http` for local dev without TLS |
 | `DATABASE_DIR` | No | Defaults to `instance/` |
 | `PORT` | No | Default `5001` |
 | `HOST` | No | Default `0.0.0.0` |
