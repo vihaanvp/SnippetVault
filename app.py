@@ -183,6 +183,18 @@ if _USE_OAUTH:
         )
         _OAUTH_PROVIDERS.append("github")
 
+# Safety check: if auth_mode is 2 (OAuth only) but no OAuth providers are
+# configured (no .env with credentials), fall back to mode 3 so the user
+# isn't locked out with no way to log in.
+if AUTH_MODE == 2 and not _OAUTH_PROVIDERS:
+    warnings.warn(
+        "AUTH_MODE is set to 2 (OAuth only) but no OAuth providers have "
+        "credentials configured. Falling back to mode 3 (both email/password "
+        "and OAuth). To enable OAuth-only mode, set GOOGLE_CLIENT_ID and "
+        "GOOGLE_CLIENT_SECRET (or GITHUB equivalents) in your .env file.",
+        RuntimeWarning,
+    )
+    AUTH_MODE = 3
 
 # ---------------------------------------------------------------------------
 # Models
