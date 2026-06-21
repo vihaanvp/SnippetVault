@@ -8,6 +8,7 @@ from pathlib import Path
 
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import (Flask, abort, flash, redirect, render_template, request,
                    url_for)
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
@@ -58,10 +59,23 @@ def _load_config():
 _CONFIG = _load_config()
 AUTH_MODE = _CONFIG["auth_mode"]
 
+_PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
+
+def _external_url(endpoint, **values):
+    """Generate an absolute URL, using PUBLIC_URL as the base if set.
+    This avoids Host-header dependency — critical behind Cloudflare Tunnel."""
+    path = url_for(endpoint, **values)
+    if _PUBLIC_URL:
+        return f"{_PUBLIC_URL}{path}"
+    return url_for(endpoint, _external=True, **values)
+
 # ---------------------------------------------------------------------------
 # App & Database Setup
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
+
+# Trust Cloudflare Tunnel's forwarded headers (X-Forwarded-Proto, X-Forwarded-Host)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # SECRET_KEY — auto-generate if not set (warns so you know to persist it)
 _secret = os.getenv("SECRET_KEY")
@@ -349,7 +363,7 @@ if _USE_OAUTH:
 
     @app.route("/login/google")
     def login_google():
-        redirect_uri = url_for("authorize_google", _external=True)
+        redirect_uri = _external_url("authorize_google")
         return oauth.google.authorize_redirect(redirect_uri)
 
     @app.route("/login/google/authorize")
@@ -374,7 +388,7 @@ if _USE_OAUTH:
 
     @app.route("/login/github")
     def login_github():
-        redirect_uri = url_for("authorize_github", _external=True)
+        redirect_uri = _external_url("authorize_github")
         return oauth.github.authorize_redirect(redirect_uri)
 
     @app.route("/login/github/authorize")
