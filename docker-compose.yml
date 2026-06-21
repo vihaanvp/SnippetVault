@@ -38,8 +38,8 @@ services:
       # --- Force Waitress production server ---
       - WAITRESS=1
     volumes:
-      # Persistent SQLite database (survives container restarts)
-      - snippetvault_data:/app/data
+      # Bind mount — creates a "data/" folder in the project directory.
+      # Contains snippets.db, roles.json, and persists across restarts.
+      - ./data:/app/data
 
-volumes:
-  snippetvault_data:
+# Named volume removed — bind mount above makes data directly accessible.

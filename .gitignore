@@ -16,6 +16,8 @@ build/
 # --- Database ---
 instance/
 *.db
+data/
+!data/.gitkeep
 
 # --- IDE ---
 .idea/

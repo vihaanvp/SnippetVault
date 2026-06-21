@@ -98,7 +98,7 @@ docker compose up -d   # → http://localhost:5001
 
 - Multi-stage build (`python:3.12-slim`), non-root user `snippet` (uid 1000).
 - Healthcheck at `GET /health` → `{"status": "ok"}`.
-- Persistent data at `/app/data` (Docker volume `snippetvault_data`).
+- Persistent data at `./data/` (bind mount) — contains `snippets.db` and `roles.json`.
 - `WAITRESS=1` set by default in the image.
 
 ## Project structure
@@ -110,6 +110,8 @@ docker compose up -d   # → http://localhost:5001
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
+├── data/               # Persistent data (snippets.db, roles.json) — bind mount
+│   └── .gitkeep
 ├── static/css/style.css
 └── templates/           # Jinja2 + Bootstrap 5
     ├── base.html

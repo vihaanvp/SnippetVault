@@ -90,7 +90,7 @@ Add `"allow_registration": false` to `config.json` to disable new account creati
 
 ### User Roles
 
-Create a `roles.json` file in your database directory (`DATABASE_DIR`) to assign roles by email:
+Create a `roles.json` file in the `data/` directory to assign roles by email:
 
 ```json
 {
@@ -101,7 +101,7 @@ Create a `roles.json` file in your database directory (`DATABASE_DIR`) to assign
 
 - Emails not in the file get the default role of **"user"**.
 - Roles are synced at startup and on every login.
-- In Docker, `roles.json` is persisted via the volume at `/app/data`.
+- The `data/` folder is a bind mount — `roles.json` lives right in your project and persists across restarts.
 - The `role` is available on the `User` model as `user.role`.
 
 ---
@@ -142,7 +142,9 @@ For local development use `http://localhost:5001/...` and set `PREFERRED_URL_SCH
 SnippetVault/
 ├── app.py              # Flask application (models, routes, OAuth, forms)
 ├── config.json         # Runtime configuration (auth mode, registration toggle)
-├── roles.json          # User role assignments by email (created manually in DATABASE_DIR)
+├── data/               # Persistent data — snippets.db, roles.json (bind mount)
+│   └── .gitkeep
+├── roles.json          # User role assignments by email (created manually in data/)
 ├── templates/          # Jinja2 templates
 │   ├── base.html
 │   ├── login.html
