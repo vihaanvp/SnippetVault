@@ -2,8 +2,8 @@
 # =============================================================================
 # SnippetVault — Docker Entrypoint
 #
-# Auto-creates persistent config files on first run so the user can simply
-# `docker compose up -d` with zero manual setup.
+# Runs as root, auto-creates config files, fixes bind-mount permissions,
+# then drops privileges to the snippet user before starting the app.
 # =============================================================================
 set -e
 
@@ -41,11 +41,9 @@ fi
 if [ -z "$SECRET_KEY" ]; then
     SECRET_KEY_FILE=/app/data/.secret_key
     if [ -f "$SECRET_KEY_FILE" ]; then
-        # Restore previously persisted key
         export SECRET_KEY=$(cat "$SECRET_KEY_FILE")
         echo "[entrypoint] Restored SECRET_KEY from $SECRET_KEY_FILE"
     else
-        # Generate a permanent key
         NEW_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
         echo "$NEW_KEY" > "$SECRET_KEY_FILE"
         export SECRET_KEY="$NEW_KEY"
@@ -53,5 +51,17 @@ if [ -z "$SECRET_KEY" ]; then
     fi
 fi
 
-# --- Execute the main command (CMD from Dockerfile) ---
+# --- Fix bind-mount permissions and drop privileges ---
+# Docker creates bind-mount host directories as root:root. The snippet user
+# (uid 1000) needs to write config.json, roles.json, snippets.db, etc.
+# This also handles the case where data/ was pre-created by the user with
+# root ownership.
+if [ "$(id -u)" = "0" ]; then
+    chown -R snippet:snippet /app/data
+    echo "[entrypoint] Fixed /app/data ownership to snippet:snippet"
+    # Drop privileges to snippet user, preserving all CMD arguments
+    exec su -s /bin/sh -c 'exec "$@"' snippet -- "$@"
+fi
+
+# --- If already running as non-root (e.g. docker run --user 1000), just exec ---
 exec "$@"

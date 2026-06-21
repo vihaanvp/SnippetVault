@@ -38,8 +38,9 @@ RUN mkdir -p /app/data && chown snippet:snippet /app/data
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
 
-# Switch to non-root user
-USER snippet
+# NOTE: No USER directive — the entrypoint runs as root so it can fix
+# bind-mount permissions, then drops privileges to the snippet user
+# (uid 1000) before running the application.
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
