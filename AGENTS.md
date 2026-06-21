@@ -15,7 +15,7 @@ python app.py          # opens http://127.0.0.1:5001
 Edit `config.json` in the project root:
 
 ```json
-{ "auth_mode": 3 }
+{ "auth_mode": 3, "allow_registration": true }
 ```
 
 | Mode | Behavior |
@@ -26,7 +26,27 @@ Edit `config.json` in the project root:
 
 The `auth_mode` value is read once at startup. Restart the app after changing it. If `config.json` is missing, it's auto-created with mode 3.
 
-Templates receive `auth_mode`, `use_oauth`, and `use_email_auth` via Flask's context processor — use these to conditionally render UI.
+### Registration toggle
+
+Set `"allow_registration": false` in `config.json` to disable new account creation (existing users can still log in). This applies to both email/password and OAuth registration.
+
+## User Roles
+
+Roles are assigned via `roles.json`, which lives in the same directory as the database (`DATABASE_DIR`). Format:
+
+```json
+{
+    "admin@example.com": "admin",
+    "moderator@example.com": "moderator"
+}
+```
+
+- Any email not in the file gets the default role of `"user"`.
+- Roles are synced on login and at startup (in `init_db()`).
+- The `roles.json` file persists across container restarts (Docker volume).
+- The `User` model has a `role` column (string, default `"user"`).
+
+Templates receive `allow_registration` via the context processor — use it to conditionally render the registration link.
 
 ## Server modes
 

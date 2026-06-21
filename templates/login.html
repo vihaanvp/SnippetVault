@@ -41,9 +41,15 @@
                 {% endif %}
 
                 {% if use_email_auth %}
+                {% if allow_registration %}
                 <p class="mt-4 small text-secondary">
                     Don't have an account? <a href="{{ url_for('register') }}" class="text-info">Register</a>
                 </p>
+                {% else %}
+                <p class="mt-4 small text-secondary">
+                    <span class="text-warning"><i class="bi bi-lock"></i> Registration is currently disabled.</span>
+                </p>
+                {% endif %}
                 {% endif %}
             </div>
         </div>

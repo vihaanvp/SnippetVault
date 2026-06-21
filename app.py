@@ -30,14 +30,19 @@ load_dotenv()
 _CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
 def _load_config():
-    """Read auth_mode from config.json. Creates file with defaults if missing."""
+    """Read config.json. Creates file with defaults if missing."""
     defaults = {
         "auth_mode": 3,
+        "allow_registration": True,
         "_comment": [
             "Authentication mode:",
             "  1 = Email/password only (register + login forms)",
             "  2 = External OAuth only (Google + GitHub)",
             "  3 = Both email/password and OAuth (default)",
+            "",
+            "allow_registration:",
+            "  false = New registrations are disabled (existing users can still log in).",
+            "  true  = Anyone can register (default).",
         ],
     }
     if not os.path.exists(_CONFIG_PATH):
@@ -51,6 +56,7 @@ def _load_config():
         if mode not in (1, 2, 3):
             mode = 3
         data["auth_mode"] = mode
+        data["allow_registration"] = data.get("allow_registration", True)
         return data
     except (json.JSONDecodeError, OSError):
         return defaults
@@ -58,6 +64,21 @@ def _load_config():
 
 _CONFIG = _load_config()
 AUTH_MODE = _CONFIG["auth_mode"]
+ALLOW_REGISTRATION = _CONFIG["allow_registration"]
+
+# Roles file — maps email → role (e.g. "admin@example.com": "admin")
+# Lives next to config.json so the admin can edit it directly.
+_ROLES_PATH = None  # set after DATABASE_DIR is resolved
+
+def _load_roles():
+    """Read the roles file and return a dict of email → role."""
+    if not os.path.exists(_ROLES_PATH):
+        return {}
+    try:
+        with open(_ROLES_PATH) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
 
 _PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 
@@ -94,6 +115,9 @@ os.makedirs(_db_dir, exist_ok=True)
 _db_path = os.path.join(_db_dir, "snippets.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{_db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Roles file lives alongside the database for Docker volume persistence
+_ROLES_PATH = os.path.join(_db_dir, "roles.json")
 
 # OAuth absolute callback URLs
 app.config["PREFERRED_URL_SCHEME"] = os.getenv("PREFERRED_URL_SCHEME", "https")
@@ -142,6 +166,7 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(500), default="")
     oauth_provider = db.Column(db.String(20))   # "google" or "github"
     oauth_id = db.Column(db.String(200))         # provider's user id
+    role = db.Column(db.String(20), default="user")  # user, admin, moderator, etc.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     snippets = db.relationship("Snippet", back_populates="author", lazy="dynamic")
@@ -155,6 +180,17 @@ class User(UserMixin, db.Model):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, password)
+
+
+def _sync_user_role(user):
+    """Look up the user's email in roles.json and update their role column.
+    If no role is defined, default to 'user'."""
+    roles = _load_roles()
+    role = roles.get(user.email, "user")
+    if user.role != role:
+        user.role = role
+        db.session.commit()
+    return role
 
 
 class Snippet(db.Model):
@@ -277,6 +313,7 @@ def inject_globals():
         "auth_mode": AUTH_MODE,
         "use_oauth": _USE_OAUTH,
         "use_email_auth": _USE_EMAIL_AUTH,
+        "allow_registration": ALLOW_REGISTRATION,
     }
 
 
@@ -292,7 +329,13 @@ def _find_or_create_user(email, username, avatar_url, provider, oauth_id):
         user.oauth_provider = provider
         user.oauth_id = oauth_id
         db.session.commit()
+        # Sync role from roles.json
+        _sync_user_role(user)
         return user
+
+    # Check if registration is allowed
+    if not ALLOW_REGISTRATION:
+        return None
 
     # Handle duplicate usernames by appending a suffix
     base_username = username
@@ -307,9 +350,12 @@ def _find_or_create_user(email, username, avatar_url, provider, oauth_id):
         avatar_url=avatar_url or "",
         oauth_provider=provider,
         oauth_id=oauth_id,
+        role="user",
     )
     db.session.add(user)
     db.session.commit()
+    # Apply role from roles.json (overrides default "user" if present)
+    _sync_user_role(user)
     return user
 
 
@@ -328,6 +374,7 @@ def login():
         if login_form.validate_on_submit():
             user = User.query.filter_by(email=login_form.email.data).first()
             if user and user.check_password(login_form.password.data):
+                _sync_user_role(user)
                 login_user(user)
                 flash(f"Welcome back, {user.username}!", "success")
                 return redirect(url_for("dashboard"))
@@ -343,15 +390,21 @@ if _USE_EMAIL_AUTH:
     def register():
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
+        if not ALLOW_REGISTRATION:
+            flash("Registration is currently disabled.", "danger")
+            return redirect(url_for("login"))
         form = RegisterForm()
         if form.validate_on_submit():
             user = User(
                 username=form.username.data,
                 email=form.email.data,
+                role="user",
             )
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
+            # Apply role from roles.json (overrides default "user" if present)
+            _sync_user_role(user)
             login_user(user)
             flash("Account created! Welcome to SnippetVault.", "success")
             return redirect(url_for("dashboard"))
@@ -382,6 +435,9 @@ if _USE_OAUTH:
             provider="google",
             oauth_id=userinfo.get("sub", email),
         )
+        if not user:
+            flash("Registration is currently disabled.", "danger")
+            return redirect(url_for("login"))
         login_user(user, remember=True)
         flash(f"Welcome, {user.username}!", "success")
         return redirect(url_for("dashboard"))
@@ -418,6 +474,9 @@ if _USE_OAUTH:
             provider="github",
             oauth_id=github_id,
         )
+        if not user:
+            flash("Registration is currently disabled.", "danger")
+            return redirect(url_for("login"))
         login_user(user, remember=True)
         flash(f"Welcome, {user.username}!", "success")
         return redirect(url_for("dashboard"))
@@ -606,18 +665,30 @@ def init_db():
     """Create tables, add missing columns, and enable WAL mode."""
     with app.app_context():
         db.create_all()
-        # Migrate: add password_hash column if missing (upgrade path for existing DBs)
         from sqlalchemy import inspect, text
         inspector = inspect(db.engine)
         columns = {c["name"] for c in inspector.get_columns("users")}
+        # Migrate: add password_hash column if missing (upgrade path for existing DBs)
         if "password_hash" not in columns:
             with db.engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(200)"))
+                conn.commit()
+        # Migrate: add role column if missing
+        if "role" not in columns:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
                 conn.commit()
         # Enable WAL mode for SQLite (better concurrent reads)
         with db.engine.connect() as conn:
             conn.execute(text("PRAGMA journal_mode=WAL"))
             conn.commit()
+        # Sync roles from roles.json to all existing users
+        roles = _load_roles()
+        for email, role in roles.items():
+            user = User.query.filter_by(email=email).first()
+            if user and user.role != role:
+                user.role = role
+        db.session.commit()
 
 
 if __name__ == "__main__":

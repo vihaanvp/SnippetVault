@@ -84,6 +84,26 @@ python app.py
 
 Change `auth_mode` in `config.json` and restart the app.
 
+### Registration Toggle
+
+Add `"allow_registration": false` to `config.json` to disable new account creation. Existing users can still log in. Default is `true`.
+
+### User Roles
+
+Create a `roles.json` file in your database directory (`DATABASE_DIR`) to assign roles by email:
+
+```json
+{
+    "admin@example.com": "admin",
+    "moderator@example.com": "moderator"
+}
+```
+
+- Emails not in the file get the default role of **"user"**.
+- Roles are synced at startup and on every login.
+- In Docker, `roles.json` is persisted via the volume at `/app/data`.
+- The `role` is available on the `User` model as `user.role`.
+
 ---
 
 ## Configuration
@@ -121,7 +141,8 @@ For local development use `http://localhost:5001/...` and set `PREFERRED_URL_SCH
 ```
 SnippetVault/
 ├── app.py              # Flask application (models, routes, OAuth, forms)
-├── config.json         # Runtime configuration (auth mode)
+├── config.json         # Runtime configuration (auth mode, registration toggle)
+├── roles.json          # User role assignments by email (created manually in DATABASE_DIR)
 ├── templates/          # Jinja2 templates
 │   ├── base.html
 │   ├── login.html
