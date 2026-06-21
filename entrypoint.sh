@@ -59,8 +59,10 @@ fi
 if [ "$(id -u)" = "0" ]; then
     chown -R snippet:snippet /app/data
     echo "[entrypoint] Fixed /app/data ownership to snippet:snippet"
-    # Drop privileges to snippet user, preserving all CMD arguments
-    exec su -s /bin/sh -c 'exec "$@"' snippet -- "$@"
+    # Drop privileges to snippet user, preserving all CMD arguments.
+    # su changes the working directory to the user's home by default,
+    # so we cd /app first to match the Dockerfile WORKDIR.
+    exec su -s /bin/sh -c 'cd /app && exec "$@"' snippet -- "$@"
 fi
 
 # --- If already running as non-root (e.g. docker run --user 1000), just exec ---
