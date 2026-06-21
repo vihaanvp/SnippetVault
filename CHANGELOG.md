@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 - Auto-fix for bind-mount permissions — entrypoint runs as root, fixes ownership, then drops privileges via `setpriv`.
 - OAuth credential checking — each provider registered only if credentials are configured; missing creds = no buttons, no crash.
 - Safety fallback — `auth_mode: 2` with no OAuth credentials falls back to mode 3 (email + OAuth) instead of showing a blank login page.
+- `CONTRIBUTING.md` — contribution guidelines, development setup, PR process.
+- `PRIVACY_POLICY.md` — data collection, storage, OAuth handling, user rights.
 
 ### Changed
 - `config.json` moved from project root to `data/` (bind mount) — persistent and editable on the host.
